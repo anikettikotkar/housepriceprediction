@@ -1,0 +1,353 @@
+---
+title: "m4"
+author: "Aniket Tikotkar & Jeroen Hak"
+date: "13-7-2020"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+#Price is right: Home edition 
+
+#m1
+##Description
+The basic definition of the problem is to predict the prices of the houses based on the features given. The project revolves around predicting the price of the house depending on the features given. A dataset has been given which has the features of houses and its prices for the year 2014-2015. The dataset has 21 columns, which could all be used as variables. All possible variables will be evaluated in order to decide if they are contributing to the algorithm. For example, the number of square meters/feet will probably have a more direct relation to the price as opposed to the amount of trees in the yard. 
+
+##Function
+The algorithm will predict the price for a house based on one or more predictors like date, zip code, square footage, number of bathrooms. It will be supervised and as a response the prices will be used. The end goal of the algorithm is that someone can put in several features of a house and the algorithm will estimate for how much it probably will be sold. Since the output is quantitative, a regression method will be used to make the prediction. 
+
+##Necessity
+This model is necessary because it can help reduce the time to decide whether to buy a house or not. This system can be used by real estate salespeople, brokers and customers alike. Depending on their needs customers can find a house suitable for them and likewise brokers can refer houses to them. This will improve efficiency. The model developed can be used to cater to other markets as well, and can be modified as is suitable. 
+
+##Data and candidate algorithms
+The dataset that is going to be used for this project is obtained from Kaggle. It contains the house prices of King County in Washington and includes Seattle. The data is publicly available and contains 21 columns and 21613 rows. This dataset was chosen because of the amount of observations and the large amount of variables. The data ranges between May 2014 and May 2015. A training and test set will be produced from the data in order to train and test the algorithm. Since the problem is a regression problem, several regression methods will be considered. These are: Linear Regression, Polynomial Regression, Ridge Regression, Stepwise Regression and Lasso Regression. To find the best algorithm for the problem, these will be tested and their performance will be evaluated. The best one will be chosen thereafter.
+
+#m2 Data summary/visualization
+```{r data, echo=FALSE}
+library(pander)
+Houses <- read.csv("kc_house_data.csv")
+attach(Houses)
+```
+
+##Data summary
+
+###Summary 
+
+```{r data_table, echo=FALSE}
+pander(summary(Houses))
+```
+The above data shows the properties of each variable, such as the mean, median, minimum and maximum value, 1st and 3rd Quantile. The price variable has a big range with the minimum value being 75000 and the maximum value being 7700000. In the rooms variable, the maximum number of rooms a house has is 33. The dataset consists of houses built between 1900 and 2015. It can be noted that people opt for a house which has three or four bedrooms. For the condition variable the median is three, from which we can notice that people prefer buying an average house, which may not have a lot of amenities but is decent enough. 
+
+###Data table example 
+
+```{r table example,echo=FALSE}
+pander(t(head(Houses,3)))
+```
+The table above shows a transposed version of the data. The first three rows are shown and the reasons the table was transposed was because of it being more readable with 20 columns. The rows in this example are the columns and give information about a specific property. 
+
+```{r col_names, echo=FALSE}
+Column_names <- c(colnames(Houses))
+Column_names_description <- c("House id", "Date the house was sold", "Selling price", "Number of bedrooms", "Number of bathrooms",
+          "Square footage living area", "square footage entire lot", "Number of floors", "Waterfront view, 1=Yes, 0=No",
+          "Number of times the house has been viewed", "Indication of condition, 1=worn out, 5=excellent",
+          "Overall grade, 1=poor, 13=excellent", "square footage minus basement", "square footage of the basement",
+          "Year the house was built", "Year the house was renovated", "Zipcode", "Latitude", "Longitude",
+          "Square footage living area in 2015", "Square footage entire lot in 2015")
+pander(data.frame(Column_names,Column_names_description))
+```
+In the table above a description of each column name is given.
+
+##Plots
+
+###Variable plots 
+
+```{r plots1, echo=FALSE}
+par(mfrow=c(2,2))
+plot(price,floors,ylab="floors")
+plot(price,waterfront,ylab="waterfront")
+plot(price,condition,ylab="condition")
+plot(price,yr_built,ylab="yr_built")
+```
+
+```{r plots2, echo=FALSE}
+par(mfrow=c(2,2))
+plot(price,yr_renovated,ylab="yr_renovated")
+plot(price,zipcode,ylab="zipcode")
+plot(price,bathrooms,ylab="bathrooms")
+plot(price,view,ylab="view")
+```
+
+```{r plots3, echo=FALSE}
+par(mfrow=c(2,2))
+plot(price,grade,ylab="grade")
+plot(price,sqft_living,ylab="sqft_living")
+plot(price,sqft_above,ylab="sqft_above")
+plot(price,sqft_lot,ylab="sqft_lot")
+```
+
+```{r plots4, echo=FALSE}
+par(mfrow=c(2,2))
+plot(price,sqft_basement,ylab="sqft_basement")
+plot(price,sqft_lot15,ylab="sqft_lot15")
+plot(price,sqft_living15,ylab="sqft_living15")
+```
+
+
+
+In the plots above are all the columns plotted against the selling price. These plots are created to pick out the candidate variables. The candidate variables that show a possible connection are bathrooms, sqft_living, grade, sqft_above, sqft_living15, bedrooms, floors and condition. These candidates will all be used for the model testing. Further analysis on the candidate variables will be performed later to check how well the variable can be used to predict the price.
+
+
+#m3 Algorithm testing
+
+##Ridge regression
+
+Ridge regression is less sensitive to high variance, than the least squares method because it weighs the variables to make them more stable. This is called L2 regularisation. Ridge regression is also less likely to overfit the data. The parameter lambda is used as a tuning parameter and can weigh variables almost down to zero if this is necessary for stability. Several values for lambda are chosen to figure out which one creates the best model. The best lambda is chosen via cross-validation.
+
+```{r Ridge1, echo=FALSE}
+library(glmnet)
+set.seed(5)
+train <- 1:10000
+test <- 10001:21613
+grid=10^seq(10,-3,by=-.1)
+x <- Houses[,4:21]
+x1 <- x[,-(14:16)]
+x2 <- as.matrix(x1)
+y <- Houses[,3]
+attach(x1)
+```
+
+
+```{r Ridge2, echo=FALSE}
+cv.out_ridge=cv.glmnet(x2[train,],y[train],alpha=0,nfolds=10)
+plot(cv.out_ridge)
+bestlam_ridge=cv.out_ridge$lambda.min
+ridge_best=glmnet(x2[train,],y[train],alpha=0,lambda=bestlam_ridge)
+ridge.pred=predict(ridge_best,s=bestlam_ridge ,newx=x2[test,])
+cat("MSE = ",mean((ridge.pred-y[test])^2))
+cat("\nMean test data = ",mean(y[test]))
+cat("\nsqrt(MSE) divided by mean = ",sqrt(mean((ridge.pred-y[test])^2))/mean(y[test]))
+MSE_ridge <- mean((ridge.pred-y[test])^2)
+```
+The MSE rises very fast when the log of lambda grows larger than 12. The MSE for the best lambda is 4.528e+10, which is quite large. Since the mean of the testing data is 545923. Taking the square root of the MSE and dividing it by the mean of the test data gives a quick indication that the prediction are ~39% off.
+
+
+
+```{r Ridge3, echo=FALSE}
+coef(ridge_best)
+bestlam_ridge
+```
+
+The predictors sqft_lot and sqft_lot15 have been (almost) shrunk to zero. The Ridge technique suggest that these predictors should not be used in the model.
+
+##Lasso regression
+
+Lasso regression is used when there is a large number of predictor variables. It stands for Least Absolute Shrinkage and Selection Operator (LASSO). The parameter lamba is used as a tuning parameter and if zero, the coefficients are the same as with linear regression. When lambda is large, all the coefficients are close to zero. We need to find the optimal lambda. This value will then be used to train the model.
+
+
+```{r Lasso1, echo=FALSE}
+par(mfrow=c(1,2))
+
+lasso_mod=glmnet(x2[train,],y[train],alpha=1,lambda=grid)
+plot(lasso_mod)
+
+cv.out=cv.glmnet(x2[train,],y[train],alpha=1,nfolds=10)
+plot(cv.out)
+bestlam=cv.out$lambda.min
+lasso_best=glmnet(x2[train,],y[train],alpha=1,lambda=bestlam)
+lasso.pred=predict(lasso_best,s=bestlam ,newx=x2[test,])
+MSE_lasso <- mean((lasso.pred-y[test])^2)
+mean(y[test])
+sqrt(mean((lasso.pred-y[test])^2))/mean(y[test])
+MSE_lasso
+```
+Most of the coefficients stay zero when the L1 norm is small (left plot). The MSE (right plot) rises very fast when the log of lambda grows larger than 10. The MSE for the best lambda is 45555184264, which is quite large. Since the mean of the testing data is 545923. Taking the square root of the MSE and dividing it by the mean of the test data gives a quick indication that the prediction are ~39% off. This is similar to the outcome of the Ridge regression technique.
+
+
+
+```{r Lasso3, echo=FALSE}
+coef(lasso_best)
+```
+
+The predictors sqft_basement, sqft_lot and sqft_lot15 have been (almost) shrunk to zero. The Lasso technique suggests that these predictors should not be used in the model.
+
+
+##GAM 
+
+Generalized Additive Model is makes use of qualitative as well as quantitative type of response. We???ve made use of GAM for a quantitative type of response, namely price. The predictors have been selected because they have a linear relation to the response, which was found by individually plotting them. The predictors yr_built and grade do not have a large area of confidence as compared to the other predictors. The better the condition of the house the more its price, similar relations can be found if we look at predictors such as sqft_above, sqft_living15, view, grade. The variables yr_built, grade show exceptional show a good fit. The plots related to the GAM can be found in Appendix I.
+
+#m4 Core algorithm fine tuning
+
+##Table 1
+```{r,  echo = FALSE, results= 'asis'}
+Comparison <- tibble::tribble(
+          	~Algorithm,       	~MSE, ~R.squared,
+  	"Linear Regression", "216052428914",   "0.6295",
+  "Polynomial Regression", "239025211970",   "0.7914",
+   	"Ridge Regression",  "45330497200",   "0.6477",
+   	"Lasso Regression",  "45555184264",   "0.6455",  
+    	"GAM",         	"218292338313",   ""
+  )
+
+require(knitr)
+require(kableExtra)
+kable_styling(
+          	kable(Comparison, digits = 3, row.names = FALSE, align = "c",
+          	caption = NULL, format = "latex"),
+    	latex_options = c("striped", "basic"),
+    	position = "center", full_width = FALSE)
+#Comparison
+```
+
+##Comparison:
+From seeing the above table you can see that out of all the algorithms, ridge regression has the lowest MSE. Polynomial regression has the highest MSE. We have decided to go ahead with ridge regression as our primary algorithm because it has the lowest MSE and its fit is good as well. The models and analysis for linear and polynomial regression can be found in Appendix II and III.
+
+
+##Best Algorithm
+
+The algorithm that performed the best is Ridge regression. As discussed in m3 in the paragraph Ridge regression, the best lambda is choses via cross-validation. The analysis of lambda can also be found in the same paragraph. The value of lambda is used to put weights on variables, which can make the model more stable.
+
+```{r R1, echo=FALSE}
+set.seed(2)
+bestlam_ridge=cv.out_ridge$lambda.min
+cat("\nBest lambda = ",bestlam_ridge)
+```
+
+This value of lambda is used to obtain the best model. This model is less likely to overfit the data as compared to the least squares method.
+
+```{r R2, echo=FALSE}
+ridge_best=glmnet(x2[train,],y[train],alpha=0,lambda=bestlam_ridge)
+ridge.pred=predict(ridge_best,s=bestlam_ridge ,newx=x2[test,])
+
+cat("MSE = ",mean((ridge.pred-y[test])^2))
+```
+
+The predictors sqft_lot and sqft_lot15 will be taken out to try to improve the MSE of the model. In milestone 3 an analysis was performed which shows that both predictors were almost shrunk down to zero.
+
+
+```{r R3, echo=FALSE}
+x <- Houses[,4:21]
+x1 <- x[,-(14:16)]
+x2 <- as.matrix(x1)
+y <- Houses[,3]
+attach(x1)
+
+x3 <- x2[,-15]
+x3 <- x3[,-4]
+```
+
+
+```{r R4, echo=FALSE}
+ridge_best=glmnet(x3[train,],y[train],alpha=0,lambda=bestlam_ridge)
+ridge.pred=predict(ridge_best,s=bestlam_ridge ,newx=x3[test,])
+
+cat("MSE = ",mean((ridge.pred-y[test])^2))
+```
+
+The MSE of the model with sqft_lot and sqft_lot15 is higher than the one with these predictors included. Even though both predictors were almost shrunk down to zero, they still contribute to the model. The final model will therefore include these two predictors.
+
+
+#Appendices
+
+##Appendix I
+```{r gam,echo=FALSE}
+library(gam)
+fit1<-gam(price~ condition + bedrooms + sqft_living15 + view + sqft_above + bathrooms + waterfront + lo(yr_built, span = 0.5) + grade, data = Houses)
+par(mfrow=c(1,1))
+plot(fit1, se = T, col = "blue")
+```
+```{r}
+summary(fit1)
+fit1
+```
+
+##Appendix II Linear regression
+
+```{r linear1, echo=FALSE}
+train <-1:10000
+test <- 10001:21613
+```
+
+```{r linear2, echo=FALSE}
+library(ISLR)
+lm1 <- lm(price ~ condition + bedrooms + sqft_living15 + view + sqft_above + bathrooms + waterfront + yr_built + grade, data = Houses[train,])
+pred_linear <- predict(lm1, data = Houses[test,])
+MSE_lm1 <- mean((price[test] - pred_linear)^2)
+MSE_lm1
+summary(lm1)
+```
+
+##Appendix III Polynomial regression
+
+```{r poly1, echo=FALSE}
+d = 2
+
+poly_fit2 = lm(price ~ poly(bedrooms, degree=d, raw=TRUE) +
+     poly(bathrooms, degree=d, raw=TRUE) +
+     poly(sqft_living, degree=d, raw=TRUE) +
+     poly(sqft_lot, degree=d, raw=TRUE) +
+     poly(floors, degree=d, raw=TRUE) +
+     poly(waterfront, degree=d, raw=TRUE) +
+     poly(view, degree=d, raw=TRUE) +
+     poly(condition, degree=d, raw=TRUE) +
+     poly(grade, degree=d, raw=TRUE) +
+     poly(sqft_above, degree=d, raw=TRUE) +
+     poly(sqft_basement, degree=d, raw=TRUE) +
+     poly(yr_built, degree=d, raw=TRUE) +
+     poly(yr_renovated, degree=d, raw=TRUE) +
+     poly(zipcode, degree=d, raw=TRUE) +
+     poly(lat, degree=d, raw=TRUE) +
+     poly(long, degree=d, raw=TRUE) +
+     poly(sqft_living15, degree=d, raw=TRUE) +
+     poly(sqft_lot15, degree=d, raw=TRUE),data=Houses[train,])
+```
+
+```{r poly2, echo=FALSE}
+summary(poly_fit2)
+```
+
+
+```{r poly3, echo=FALSE}
+d = 3
+
+poly_fit3 = lm(price ~ poly(bedrooms, degree=d, raw=TRUE) +
+     poly(bathrooms, degree=d, raw=TRUE) +
+     poly(sqft_living, degree=d, raw=TRUE) +
+     poly(sqft_lot, degree=d, raw=TRUE) +
+     poly(floors, degree=d, raw=TRUE) +
+     poly(waterfront, degree=d, raw=TRUE) +
+     poly(view, degree=d, raw=TRUE) +
+     poly(condition, degree=d, raw=TRUE) +
+     poly(grade, degree=d, raw=TRUE) +
+     poly(sqft_above, degree=d, raw=TRUE) +
+     poly(sqft_basement, degree=d, raw=TRUE) +
+     poly(yr_built, degree=d, raw=TRUE) +
+     poly(yr_renovated, degree=d, raw=TRUE) +
+     poly(zipcode, degree=d, raw=TRUE) +
+     poly(lat, degree=d, raw=TRUE) +
+     poly(long, degree=d, raw=TRUE) +
+     poly(sqft_living15, degree=d, raw=TRUE) +
+     poly(sqft_lot15, degree=d, raw=TRUE),data=Houses[train,])
+```
+
+```{r poly4, echo=FALSE}
+summary(poly_fit3)
+```
+
+```{r poly5, echo=FALSE}
+pred_poly2 <- predict(poly_fit2,data=Houses[test,])
+pred_poly3 <- predict(poly_fit3,data=Houses[test,])
+```
+
+```{r poly6, echo=FALSE}
+MSE_poly2 <- mean((price[test] - pred_poly2) ^ 2)
+MSE_poly2
+```
+
+```{r poly7, echo=FALSE}
+MSE_poly3 <- mean((price[test] - pred_poly3) ^ 2)
+MSE_poly3
+```
+
+
